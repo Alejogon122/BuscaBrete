@@ -1,53 +1,52 @@
 ﻿@model IEnumerable<BuscaBrete.Models.Postulacion>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Postulaciones";
 }
 
-<h1>Index</h1>
+<h1>Postulaciones</h1>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.FechaPostulacion)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Estado)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.PostulanteId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.OfertaId)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.FechaPostulacion)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Estado)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.PostulanteId)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.OfertaId)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
 }
-    </tbody>
-</table>
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<form asp-action="Open" method="post">
+    @Html.AntiForgeryToken()
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th></th>
+                <th>Oferta</th>
+                <th>Postulante</th>
+                <th>Mensaje</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    <input type="radio" name="selectedId" value="@item.Id" />
+                </td>
+                <td>@item.Oferta?.Titulo</td>
+                <td>@item.Postulante?.UserName</td>
+                <td>@Html.Raw(item.Mensaje?.Length > 200 ? item.Mensaje.Substring(0,200) + "..." : item.Mensaje)</td>
+                <td>@item.FechaPostulacion.ToString("g")</td>
+                <td>@item.Estado</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Abrir seleccionada</button>
+        <a asp-action="Create" class="btn btn-success">Crear nueva postulación</a>
+    </div>
+</form>

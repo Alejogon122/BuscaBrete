@@ -4,7 +4,7 @@
     ViewData["Title"] = "Details";
 }
 
-<h1>Details</h1>
+<h1>Detalles de la Oferta</h1>
 
 <div>
     <h4>Oferta</h4>
@@ -47,14 +47,24 @@
             @Html.DisplayFor(model => model.Salario)
         </dd>
         <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.EmpresaId)
+            Empresa
         </dt>
         <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.EmpresaId)
+            @Model.Empresa?.NombreEmpresa ?? @Model.Empresa?.UserName
         </dd>
     </dl>
 </div>
 <div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+    @if (ViewBag.IsPostulante == true)
+    {
+        <form asp-controller="Postulacions" asp-action="Create" method="get">
+            <input type="hidden" name="ofertaId" value="@Model.Id" />
+            <button type="submit" class="btn btn-success">Postular</button>
+        </form>
+    }
+    @if (ViewBag.IsOwner == true)
+    {
+        <a asp-controller="Postulacions" asp-action="Index" asp-route-ofertaId="@Model.Id" class="btn btn-primary">Ver postulaciones</a>
+    }
+    <a asp-action="Index" class="btn btn-link">Volver</a>
 </div>

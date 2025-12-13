@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 
 namespace BuscaBrete.Controllers
 {
-    [Authorize(Roles = "Administrador, Empresa")]
     public class OfertasController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -26,6 +25,7 @@ namespace BuscaBrete.Controllers
         }
 
         // GET: Ofertas
+        [AllowAnonymous]
         public async Task<IActionResult> Index(
             string searchString,
             string ubicacion,
@@ -59,6 +59,7 @@ namespace BuscaBrete.Controllers
         }
 
         // GET: Ofertas/Details/5
+        [AllowAnonymous]
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -67,16 +68,34 @@ namespace BuscaBrete.Controllers
             }
 
             var oferta = await _context.Oferta
+                .Include(o => o.Empresa)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (oferta == null)
             {
                 return NotFound();
             }
 
+            // Determine if current user is the company owner for this offer
+            var currentUser = await _userManager.GetUserAsync(User);
+            ViewBag.IsPostulante = false;
+            ViewBag.IsOwner = false;
+            if (currentUser != null)
+            {
+                if (User.IsInRole("Postulante"))
+                {
+                    ViewBag.IsPostulante = true;
+                }
+                if (User.IsInRole("Empresa") && currentUser.Id == oferta.EmpresaId)
+                {
+                    ViewBag.IsOwner = true;
+                }
+            }
+
             return View(oferta);
         }
 
         // GET: Ofertas/Create
+        [Authorize(Roles = "Administrador, Empresa")]
         public async Task<IActionResult> Create()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -90,6 +109,7 @@ namespace BuscaBrete.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Administrador, Empresa")]
         public async Task<IActionResult> Create(Oferta oferta)
         {
            
@@ -118,6 +138,7 @@ namespace BuscaBrete.Controllers
         }
 
         // GET: Ofertas/Edit/5
+        [Authorize(Roles = "Administrador, Empresa")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -138,6 +159,7 @@ namespace BuscaBrete.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Administrador, Empresa")]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Titulo,Descripcion,Requisitos,FechaPublicacion,Ubicacion,Salario,EmpresaId")] Oferta oferta)
         {
             if (id != oferta.Id)
@@ -169,6 +191,7 @@ namespace BuscaBrete.Controllers
         }
 
         // GET: Ofertas/Delete/5
+        [Authorize(Roles = "Administrador, Empresa")]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -189,6 +212,7 @@ namespace BuscaBrete.Controllers
         // POST: Ofertas/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Administrador, Empresa")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var oferta = await _context.Oferta.FindAsync(id);

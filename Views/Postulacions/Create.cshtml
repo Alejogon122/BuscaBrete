@@ -4,36 +4,63 @@
     ViewData["Title"] = "Create";
 }
 
-<h1>Create</h1>
+<h1>Crear Postulacion</h1>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
 
 <h4>Postulacion</h4>
 <hr />
+
+@* Display model state errors *@
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        <ul>
+            @foreach (var e in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <li>@e.ErrorMessage</li>
+            }
+        </ul>
+    </div>
+}
+
 <div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
+    <div class="col-md-6">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
             <div class="form-group">
-                <label asp-for="FechaPostulacion" class="control-label"></label>
-                <input asp-for="FechaPostulacion" class="form-control" />
-                <span asp-validation-for="FechaPostulacion" class="text-danger"></span>
+                <label asp-for="Mensaje" class="control-label"></label>
+                <textarea asp-for="Mensaje" class="form-control"></textarea>
+                <span asp-validation-for="Mensaje" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="Estado" class="control-label"></label>
-                <input asp-for="Estado" class="form-control" />
-                <span asp-validation-for="Estado" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="PostulanteId" class="control-label"></label>
-                <input asp-for="PostulanteId" class="form-control" />
-                <span asp-validation-for="PostulanteId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="OfertaId" class="control-label"></label>
-                <input asp-for="OfertaId" class="form-control" />
-                <span asp-validation-for="OfertaId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
+
+            @* If OfertaId not preset, allow selection *@
+            @if ((Model?.OfertaId ?? 0) == 0 && ViewBag.Ofertas != null)
+            {
+                <div class="form-group mt-2">
+                    <label for="OfertaId">Oferta</label>
+                    <select asp-for="OfertaId" asp-items="ViewBag.Ofertas" class="form-select">
+                        <option value="">-- Seleccione una oferta --</option>
+                    </select>
+                    <span asp-validation-for="OfertaId" class="text-danger"></span>
+                </div>
+            }
+            else
+            {
+                <input asp-for="OfertaId" type="hidden" />
+            }
+
+            <div class="form-group mt-3">
+                <input type="submit" value="Postular" class="btn btn-primary" />
             </div>
         </form>
     </div>

@@ -7,22 +7,79 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using BuscaBrete.Data;
 using BuscaBrete.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting;
+using System.IO;
 
 namespace BuscaBrete.Controllers
 {
+    [Authorize]
     public class PostulacionsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IWebHostEnvironment _env;
 
-        public PostulacionsController(ApplicationDbContext context)
+        public PostulacionsController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IWebHostEnvironment env)
         {
             _context = context;
+            _userManager = userManager;
+            _env = env;
         }
 
         // GET: Postulacions
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int? ofertaId)
         {
-            return View(await _context.Postulacion.ToListAsync());
+            // total in DB for debugging
+            var total = await _context.Postulacion.CountAsync();
+
+            var query = _context.Postulacion
+                .Include(p => p.Oferta)
+                .Include(p => p.Postulante)
+                .AsQueryable();
+
+            if (ofertaId.HasValue)
+            {
+                query = query.Where(p => p.OfertaId == ofertaId.Value);
+            }
+
+            // Si el usuario es empresa, mostrar solo postulaciones para sus ofertas
+            if (User.IsInRole("Empresa"))
+            {
+                var userId = _userManager.GetUserId(User);
+                query = query.Where(p => p.Oferta.EmpresaId == userId);
+            }
+
+            // Si el usuario es postulante, mostrar solo sus postulaciones
+            if (User.IsInRole("Postulante"))
+            {
+                var userId = _userManager.GetUserId(User);
+                query = query.Where(p => p.PostulanteId == userId);
+            }
+
+            var list = await query.ToListAsync();
+
+            ViewBag.TotalPostulaciones = total;
+            ViewBag.VisiblePostulaciones = list.Count;
+
+            return View(list);
+        }
+
+        // POST: Postulacions/Open
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult Open(int? selectedId)
+        {
+            if (!selectedId.HasValue)
+            {
+                // No selection made, return to list with message (TempData)
+                TempData["Error"] = "Debe seleccionar una postulación.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            return RedirectToAction(nameof(Details), new { id = selectedId.Value });
         }
 
         // GET: Postulacions/Details/5
@@ -34,6 +91,8 @@ namespace BuscaBrete.Controllers
             }
 
             var postulacion = await _context.Postulacion
+                .Include(p => p.Oferta)
+                .Include(p => p.Postulante)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (postulacion == null)
             {
@@ -44,25 +103,86 @@ namespace BuscaBrete.Controllers
         }
 
         // GET: Postulacions/Create
-        public IActionResult Create()
+        [Authorize(Roles = "Postulante")]
+        public IActionResult Create(int? ofertaId)
         {
-            return View();
+            ViewBag.OfertaId = ofertaId ?? 0;
+            var model = new Postulacion();
+            if (ofertaId.HasValue)
+            {
+                model.OfertaId = ofertaId.Value;
+            }
+
+            // Suministrar listado de ofertas para selección cuando no viene preseleccionada
+            if (!ofertaId.HasValue || model.OfertaId == 0)
+            {
+                ViewBag.Ofertas = new SelectList(_context.Oferta.Include(o => o.Empresa).OrderBy(o => o.Titulo).Select(o => new {
+                    o.Id,
+                    Texto = o.Titulo
+                }), "Id", "Texto");
+            }
+
+            return View(model);
         }
 
         // POST: Postulacions/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,FechaPostulacion,Estado,PostulanteId,OfertaId")] Postulacion postulacion)
+        [Authorize(Roles = "Postulante")]
+        public async Task<IActionResult> Create([Bind("Mensaje,OfertaId")] Postulacion postulacion)
         {
-            if (ModelState.IsValid)
+            // Build entity server-side to avoid client-side binding validation on required keys
+            var userId = _userManager.GetUserId(User);
+            var newPost = new Postulacion
             {
-                _context.Add(postulacion);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                Mensaje = postulacion.Mensaje,
+                OfertaId = postulacion.OfertaId,
+                PostulanteId = userId,
+                FechaPostulacion = DateTime.UtcNow,
+                Estado = "Pendiente"
+            };
+
+            // Validate OfertaId
+            if (newPost.OfertaId == 0)
+            {
+                TempData["Error"] = "Oferta inválida.";
+                // Reponer lista de ofertas para el formulario
+                ViewBag.Ofertas = new SelectList(_context.Oferta.OrderBy(o => o.Titulo), "Id", "Titulo");
+                return View(newPost);
             }
-            return View(postulacion);
+
+            // Ensure Oferta exists
+            var oferta = await _context.Oferta.FindAsync(newPost.OfertaId);
+            if (oferta == null)
+            {
+                TempData["Error"] = "La oferta seleccionada no existe.";
+                ViewBag.Ofertas = new SelectList(_context.Oferta.OrderBy(o => o.Titulo), "Id", "Titulo");
+                return View(newPost);
+            }
+
+            // Prevent duplicate application for same oferta by same postulante
+            var exists = await _context.Postulacion.AnyAsync(p => p.OfertaId == newPost.OfertaId && p.PostulanteId == newPost.PostulanteId);
+            if (exists)
+            {
+                TempData["Error"] = "Ya te has postulado a esta oferta.";
+                return RedirectToAction(nameof(Index), new { ofertaId = newPost.OfertaId });
+            }
+
+            // Save
+            try
+            {
+                _context.Postulacion.Add(newPost);
+                await _context.SaveChangesAsync();
+                TempData["Success"] = "Postulación creada correctamente.";
+                return RedirectToAction(nameof(Index), new { ofertaId = newPost.OfertaId });
+            }
+            catch (Exception)
+            {
+                TempData["Error"] = "Error al guardar la postulación.";
+                // Reponer lista por si se vuelve al formulario
+                ViewBag.Ofertas = new SelectList(_context.Oferta.OrderBy(o => o.Titulo), "Id", "Titulo");
+                return View(newPost);
+            }
         }
 
         // GET: Postulacions/Edit/5
@@ -82,11 +202,9 @@ namespace BuscaBrete.Controllers
         }
 
         // POST: Postulacions/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,FechaPostulacion,Estado,PostulanteId,OfertaId")] Postulacion postulacion)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,FechaPostulacion,Estado,PostulanteId,OfertaId,Mensaje")] Postulacion postulacion)
         {
             if (id != postulacion.Id)
             {
@@ -125,6 +243,8 @@ namespace BuscaBrete.Controllers
             }
 
             var postulacion = await _context.Postulacion
+                .Include(p => p.Oferta)
+                .Include(p => p.Postulante)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (postulacion == null)
             {
