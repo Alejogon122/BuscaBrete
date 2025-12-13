@@ -1,0 +1,79 @@
+﻿@model BuscaBrete.Models.PerfilPostulante
+
+@{
+    ViewData["Title"] = "Crear Perfil";
+}
+
+<h2>Crear Perfil</h2>
+<hr />
+@if (ViewBag.Errores != null)
+{
+    <div class="alert alert-danger">
+        <strong>Errores:</strong><br />
+        @ViewBag.Errores
+    </div>
+}
+
+
+<div class="row">
+    <div class="col-md-6">
+
+        <form asp-action="Create" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <!-- Dirección -->
+            <div class="form-group mb-3">
+                <label asp-for="Direccion" class="form-label"></label>
+                <input asp-for="Direccion" class="form-control" />
+                <span asp-validation-for="Direccion" class="text-danger"></span>
+            </div>
+
+            <!-- Fecha Nacimiento -->
+            <div class="form-group mb-3">
+                <label asp-for="FechaNacimiento" class="form-label"></label>
+                <input asp-for="FechaNacimiento" type="date" class="form-control" />
+                <span asp-validation-for="FechaNacimiento" class="text-danger"></span>
+            </div>
+
+            <!-- Resumen -->
+            <div class="form-group mb-3">
+                <label asp-for="Resumen" class="form-label"></label>
+                <textarea asp-for="Resumen" class="form-control"></textarea>
+                <span asp-validation-for="Resumen" class="text-danger"></span>
+            </div>
+
+            <!-- Teléfono -->
+            <div class="form-group mb-3">
+                <label asp-for="Telefono" class="form-label"></label>
+                <input asp-for="Telefono" class="form-control" />
+                <span asp-validation-for="Telefono" class="text-danger"></span>
+            </div>
+
+            <!-- Habilidades -->
+            <div class="form-group mb-3">
+                <label asp-for="Habilidades" class="form-label"></label>
+                <textarea asp-for="Habilidades" class="form-control"></textarea>
+                <span asp-validation-for="Habilidades" class="text-danger"></span>
+            </div>
+
+            <!-- Subir CV -->
+            <div class="form-group mb-3">
+                <label class="form-label">Cargar CV (PDF)</label>
+                <input type="file" name="CVFile" accept="application/pdf" class="form-control" />
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3">Guardar</button>
+        </form>
+
+    </div>
+</div>
+
+<div class="mt-3">
+    <a asp-action="Index">Volver</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

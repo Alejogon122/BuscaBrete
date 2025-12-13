@@ -1,0 +1,56 @@
+﻿@model BuscaBrete.Models.PerfilPostulante
+
+@{
+    ViewData["Title"] = "Mi Perfil";
+}
+
+<h2>Mi Perfil</h2>
+<hr />
+
+@if (Model == null)
+{
+    <p>No has creado tu perfil aún.</p>
+    <a class="btn btn-primary" asp-action="Create">Crear Perfil</a>
+}
+else
+{
+    <div class="card shadow-sm p-4 mt-3">
+        <h4 class="mb-3">@Model.Postulante.UserName</h4>
+
+        <dl class="row">
+            <dt class="col-sm-3">Dirección</dt>
+            <dd class="col-sm-9">@Model.Direccion</dd>
+
+            <dt class="col-sm-3">Fecha de nacimiento</dt>
+            <dd class="col-sm-9">
+                @(Model.FechaNacimiento.HasValue ?
+                            Model.FechaNacimiento.Value.ToString("dd/MM/yyyy") : "")
+        </dd>
+
+            <dt class="col-sm-3">Resumen</dt>
+            <dd class="col-sm-9">@Model.Resumen</dd>
+
+            <dt class="col-sm-3">Teléfono</dt>
+            <dd class="col-sm-9">@Model.Telefono</dd>
+
+            <dt class="col-sm-3">Habilidades</dt>
+            <dd class="col-sm-9">@Model.Habilidades</dd>
+
+            <dt class="col-sm-3">Currículum</dt>
+            <dd class="col-sm-9">
+            @if (!string.IsNullOrEmpty(Model.CVPath))
+                {
+                    <a href="@Model.CVPath" target="_blank">Ver CV</a>
+                }
+                else
+                {
+                    <span>No hay CV cargado</span>
+                }
+            </dd>
+        </dl>
+
+        <a class="btn btn-warning" asp-action="Edit">Editar Perfil</a>
+        <a class="btn btn-secondary" asp-controller="Home" asp-action="Index">Volver</a>
+    </div>
+}
+
