@@ -15,7 +15,7 @@
     <div class="alert alert-success">@TempData["Success"]</div>
 }
 
-<form asp-action="Open" method="post">
+<form asp-action="Open" method="post" id="openForm">
     @Html.AntiForgeryToken()
     <table class="table table-striped">
         <thead>
@@ -50,3 +50,33 @@
         <a asp-action="Create" class="btn btn-success">Crear nueva postulación</a>
     </div>
 </form>
+
+<form asp-action="DeleteSelected" method="post" class="mt-2" id="deleteForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="selectedId" id="selectedIdHidden" />
+    <button type="submit" class="btn btn-danger">Eliminar seleccionada</button>
+</form>
+
+@section Scripts {
+<script>
+    // Copiar el valor de selectedId del formulario de apertura al de eliminación
+    (function() {
+        const radios = document.querySelectorAll('input[name="selectedId"]');
+        const hidden = document.getElementById('selectedIdHidden');
+        function syncHidden() {
+            const checked = document.querySelector('input[name="selectedId"]:checked');
+            hidden.value = checked ? checked.value : '';
+        }
+        radios.forEach(r => r.addEventListener('change', syncHidden));
+        // Inicializar por si ya hubiera uno marcado
+        syncHidden();
+        // Evitar submit si no hay selección
+        document.getElementById('deleteForm').addEventListener('submit', function(e){
+            if (!hidden.value) {
+                e.preventDefault();
+                alert('Seleccione una postulación para eliminar.');
+            }
+        });
+    })();
+</script>
+}

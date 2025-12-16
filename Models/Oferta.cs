@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -25,5 +26,8 @@ namespace BuscaBrete.Models
         [Required]
         public string EmpresaId { get; set; }
         public ApplicationUser Empresa { get; set; }
+
+        // Navegación inversa: ofertas tienen muchas postulaciones
+        public ICollection<Postulacion> Postulaciones { get; set; } = new List<Postulacion>();
     }
 }

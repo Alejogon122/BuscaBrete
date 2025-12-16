@@ -35,6 +35,20 @@ namespace BuscaBrete.Data
             builder.Entity<PerfilPostulante>()
                 .HasIndex(p => p.PostulanteId) //validacion para asegurar que un postulante tenga un solo perfil
                 .IsUnique();
+
+            // Relación Oferta (1) -> Postulacion (N), cascada al eliminar oferta
+            builder.Entity<Oferta>()
+                .HasMany(o => o.Postulaciones)
+                .WithOne(p => p.Oferta)
+                .HasForeignKey(p => p.OfertaId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Relación ApplicationUser (Postulante) (1) -> Postulacion (N), usando FK PostulanteId (string)
+            builder.Entity<ApplicationUser>()
+                .HasMany(u => u.Postulaciones)
+                .WithOne(p => p.Postulante)
+                .HasForeignKey(p => p.PostulanteId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

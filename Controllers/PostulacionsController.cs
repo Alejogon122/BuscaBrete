@@ -113,14 +113,15 @@ namespace BuscaBrete.Controllers
                 model.OfertaId = ofertaId.Value;
             }
 
-            // Suministrar listado de ofertas para selección cuando no viene preseleccionada
-            if (!ofertaId.HasValue || model.OfertaId == 0)
+            if (ofertaId.HasValue && model.OfertaId != 0)
             {
-                ViewBag.Ofertas = new SelectList(_context.Oferta.Include(o => o.Empresa).OrderBy(o => o.Titulo).Select(o => new {
-                    o.Id,
-                    Texto = o.Titulo
-                }), "Id", "Texto");
+                return View(model);
             }
+            ViewBag.Ofertas = new SelectList(_context.Oferta.Include(o => o.Empresa).OrderBy(o => o.Titulo).Select(o => new
+            {
+                o.Id,
+                Texto = o.Titulo
+            }), "Id", "Texto");
 
             return View(model);
         }
@@ -146,7 +147,8 @@ namespace BuscaBrete.Controllers
             if (newPost.OfertaId == 0)
             {
                 TempData["Error"] = "Oferta inválida.";
-                // Reponer lista de ofertas para el formulario
+
+              
                 ViewBag.Ofertas = new SelectList(_context.Oferta.OrderBy(o => o.Titulo), "Id", "Titulo");
                 return View(newPost);
             }
@@ -266,6 +268,41 @@ namespace BuscaBrete.Controllers
             }
 
             await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        // POST: Postulacions/DeleteSelected
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteSelected(int? selectedId)
+        {
+            if (!selectedId.HasValue)
+            {
+                TempData["Error"] = "Debe seleccionar una postulación para eliminar.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var postulacion = await _context.Postulacion.FindAsync(selectedId.Value);
+            if (postulacion == null)
+            {
+                TempData["Error"] = "La postulación seleccionada no existe.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Permitir eliminación solo al dueño (postulante) o a la empresa dueña de la oferta
+            var currentUserId = _userManager.GetUserId(User);
+            var isOwnerPostulante = postulacion.PostulanteId == currentUserId;
+            var oferta = await _context.Oferta.AsNoTracking().FirstOrDefaultAsync(o => o.Id == postulacion.OfertaId);
+            var isOwnerEmpresa = oferta != null && oferta.EmpresaId == currentUserId;
+            if (!(isOwnerPostulante || isOwnerEmpresa || User.IsInRole("Administrador")))
+            {
+                TempData["Error"] = "No tiene permiso para eliminar esta postulación.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            _context.Postulacion.Remove(postulacion);
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Postulación eliminada.";
             return RedirectToAction(nameof(Index));
         }
 

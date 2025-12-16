@@ -23,16 +23,16 @@
             @Html.DisplayFor(model => model.Estado)
         </dd>
         <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PostulanteId)
+            Postulante
         </dt>
         <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PostulanteId)
+            @Model.Postulante?.UserName
         </dd>
         <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.OfertaId)
+            Oferta
         </dt>
         <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.OfertaId)
+            @Model.Oferta?.Titulo
         </dd>
         <dt class = "col-sm-2">Mensaje</dt>
         <dd class = "col-sm-10">@Html.Raw(Model.Mensaje)</dd>
